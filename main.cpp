@@ -9,21 +9,32 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
 	VideoCapture camera;
+	Mat frame;
 	camera.open(0, CAP_ANY);
 	if (!camera.isOpened()) {
 		cout << "ERROR: Unable to open camera" << endl;
 		return -1;
 	}
-	namedWindow("Camera", WINDOW_AUTOSIZE);
+	namedWindow("Camera");
 	while (true) {
-		Mat frame;
+		
 		camera >> frame;
 		if (frame.empty()) {
-			cout << "ERROR: Blank frame grabbed" << endl;
+			cout << "ERROR: Couldn't find frame" << endl;
 			break;
 		}
 		imshow("Camera", frame);
-		if (waitKey(30) >= 0) break;
+
+		int k = waitKey(1);
+		if (k % 256 == 32) break;
 	}
+
+	// After this point, we should have a picture of the player's choice, we need to then run recognition
+
+	imshow("Result", frame);
+
+
+
+	waitKey(0);
 	return 0;
 }
