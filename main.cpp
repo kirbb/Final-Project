@@ -154,7 +154,7 @@ struct mostCentralPointFinder {
 	}
 };
 
-vector<int> generateHull(const vector<Point>& contour, double maxDistance) {
+vector<Point> generateHull(const vector<Point>& contour, double maxDistance) {
 	vector<int> hull;
 	convexHull(contour, hull);
 
@@ -186,14 +186,49 @@ vector<int> generateHull(const vector<Point>& contour, double maxDistance) {
 		points.push_back(entry.second);
 	}
 
-	vector<int> result;
+	vector<Point> result;
 	for (int i = 0; i < points.size(); i++) {
 		Point center = calculateCenter(points[i]);
 		indexPoint mostCentralPoint = cursor(points[i], center);
-		result.push_back(mostCentralPoint.index); 
+		result.push_back(mostCentralPoint.point); 
 	}
 
 	return result;
+}
+
+void showHistograms(Mat& hsvImage) {
+	vector<Mat> hsvChannels;
+	split(hsvImage, hsvChannels);
+
+	int hbins = 180;
+	int sbins = 255;
+	int histSize[] = { hbins, sbins };
+	float hranges[] = { 0, 180 };
+	float sranges[] = { 0, 255 };
+	const float* ranges[] = { hranges, sranges };
+	int channels[] = { 0, 1 };
+
+	MatND hist;
+	calcHist(&hsvChannels[0], 1, channels, Mat(), hist, 2, histSize, ranges, true, false);
+	//calcHist(hsvImage, 1, channels, Mat(), hist, 2, histSize, ranges);
+
+	normalize(hist, hist, 0, 255, NORM_MINMAX, -1, Mat());
+
+	// Visualize the histograms (optional)
+	int histWidth = 512;
+	int histHeight = 400;
+	Mat histImage(histHeight, histWidth, CV_8UC3, Scalar(0, 0, 0));
+
+	int binWidth = cvRound((double)histWidth / histSize[0]);
+	for (int h = 0; h < histSize[0]; h++) {
+		rectangle(histImage, Point(h * binWidth, histHeight),
+			Point((h + 1) * binWidth, histHeight - cvRound(hist.at<float>(h))),
+			Scalar(0, 255, 0), -1);
+	}
+
+	// Display the histograms
+	namedWindow("Hue and Saturation Histogram", WINDOW_KEEPRATIO);
+	imshow("Hue and Saturation Histogram", histImage);
 }
 
 int testConvexHull() {
@@ -227,76 +262,31 @@ int testConvexHull() {
 	// Video Section
 	//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	//VideoCapture camera;
-	//camera.open(0, CAP_ANY);
+	VideoCapture camera;
+	camera.open(0, CAP_ANY);
 
-	//if (!camera.isOpened()) {
-	//	cout << "ERROR: Unable to open camera" << endl;
-	//	return -1;
-	//}
+	if (!camera.isOpened()) {
+		cout << "ERROR: Unable to open camera" << endl;
+		return -1;
+	}
 
-	//Mat frame, mask;
-	//while (true) {
-	//	camera >> frame;
-	//	if (frame.empty()) break;
-
-	//	Mat hsv;
-	//	cvtColor(frame, hsv, COLOR_BGR2HSV);
-
-	//	namedWindow("HSV", WINDOW_KEEPRATIO);
-	//	resizeWindow("HSV", frame.cols / 2, frame.rows / 2);
-	//	imshow("HSV", hsv);
-
-	//	Mat mask;
-	//	inRange(hsv, Scalar(bLower, gLower, rLower), Scalar(bUpper, gUpper, rUpper), mask); //hue, 0.8 * 255, 0.6 * 255
-	//	//inRange(hsv, Scalar(0, 0.1 * 255, 0.05 * 255), Scalar(15, 0.8 * 255, 0.6 * 255), mask);
-
-	//	Mat blurred;
-	//	blur(mask, blurred, Size(10, 10));
-
-	//	Mat thresh;
-	//	threshold(blurred, thresh, 200, 255, THRESH_BINARY);
-
-	//	vector<vector<Point>> contours;
-	//	findContours(thresh, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-	//	
-	//	if (!contours.empty()) {
-	//		int largestIndex = findLargestContour(contours);
-	//		vector<Point> largestContour = contours[largestIndex];
-	//		vector<int> hull = generateHull(largestContour, 10.0);
-	//		vector<Point> points;
-	//		for (int i = 0; i < hull.size(); i++) {
-	//			points.push_back(largestContour[hull[i]]);
-	//		}
-	//		polylines(frame, points, false, Scalar(0, 255, 0), 5);
-	//		//drawContours(frame, contours, largestIndex, Scalar(0, 255, 255), 5);
-	//	}
-
-	//	//putText(image, "Best Match: " + getSign(bestMatch) + " Score: " + to_string(bestScore), Point(20, 60), FONT_HERSHEY_SIMPLEX, 3, Scalar(0, 255, 255), 5);
-	//	namedWindow("Reference", WINDOW_KEEPRATIO);
-	//	resizeWindow("Reference", frame.cols / 2, frame.rows / 2);
-	//	imshow("Reference", frame);
-
-	//	int k = waitKey(1);
-	//	if (k % 256 == 32) break;
-	//}
-
-	//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-	// Image Section
-	//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+	Mat frame, mask;
 	while (true) {
-		Mat image = imread("pic2.jpg");
+		camera >> frame;
+		if (frame.empty()) break;
 
-		Mat hls;
-		cvtColor(image, hls, COLOR_BGR2HSV);
-		namedWindow("hsv", WINDOW_KEEPRATIO);
-		resizeWindow("hsv", image.cols / 5, image.rows / 5);
-		imshow("hsv", hls);
+		Mat hsv;
+		cvtColor(frame, hsv, COLOR_BGR2HSV);
+
+		showHistograms(hsv);
+
+		namedWindow("HSV", WINDOW_KEEPRATIO);
+		resizeWindow("HSV", frame.cols / 2, frame.rows / 2);
+		imshow("HSV", hsv);
 
 		Mat mask;
-		inRange(hls, Scalar(bLower, gLower, rLower), Scalar(bUpper, gUpper, rUpper), mask);
+		inRange(hsv, Scalar(bLower, gLower, rLower), Scalar(bUpper, gUpper, rUpper), mask);
+		//inRange(hsv, Scalar(0, .1 * 255, .05 * 255), Scalar(15, .8 * 255, .6 * 255), mask);
 
 		Mat blurred;
 		blur(mask, blurred, Size(10, 10));
@@ -307,31 +297,80 @@ int testConvexHull() {
 		vector<vector<Point>> contours;
 		findContours(thresh, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-		int largestIndex = findLargestContour(contours);
-		vector<Point> largestContour = contours[largestIndex];
+		
+		if (!contours.empty()) {
+			int largestIndex = findLargestContour(contours);
+			vector<Point> largestContour = contours[largestIndex];
+			vector<Point> cHull(largestContour.size());
+			convexHull(largestContour, cHull);
 
-		/*vector<int> hull = generateHull(largestContour, 10.0);
-		vector<Point> points;
-		for (int i = 0; i < hull.size(); i++) {
-			points.push_back(largestContour[hull[i]]);
-		}*/
-		//polylines(image, points, false, Scalar(0, 255, 0), 5);
+			double epsilon = 0.02 * arcLength(cHull, true);
+			vector<Point> simplifiedHull;
+			approxPolyDP(cHull, simplifiedHull, epsilon, true);
 
-		vector<Point> cHull;
-		convexHull(largestContour, cHull);
-		drawContours(image, cHull, -1, Scalar(0, 255, 0), 5);
+			polylines(frame, simplifiedHull, true, Scalar(0, 255, 0), 5);
+		}
 
+		//putText(image, "Best Match: " + getSign(bestMatch) + " Score: " + to_string(bestScore), Point(20, 60), FONT_HERSHEY_SIMPLEX, 3, Scalar(0, 255, 255), 5);
 		namedWindow("Reference", WINDOW_KEEPRATIO);
-		resizeWindow("Reference", image.cols / 5, image.rows / 5);
-		imshow("Reference", image);
+		resizeWindow("Reference", frame.cols / 2, frame.rows / 2);
+		imshow("Reference", frame);
 
 		int k = waitKey(1);
 		if (k % 256 == 32) break;
 	}
 
+	//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	// Image Section
+	//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	//while (true) {
+	//	Mat image = imread("pic2.jpg");
+
+	//	Mat hls;
+	//	cvtColor(image, hls, COLOR_BGR2HSV);
+	//	namedWindow("hsv", WINDOW_KEEPRATIO);
+	//	resizeWindow("hsv", image.cols / 5, image.rows / 5);
+	//	imshow("hsv", hls);
+
+	//	Mat mask;
+	//	inRange(hls, Scalar(bLower, gLower, rLower), Scalar(bUpper, gUpper, rUpper), mask);
+
+	//	Mat blurred;
+	//	blur(mask, blurred, Size(10, 10));
+
+	//	Mat thresh;
+	//	threshold(blurred, thresh, 200, 255, THRESH_BINARY);
+
+	//	vector<vector<Point>> contours;
+	//	findContours(thresh, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+	//	int largestIndex = findLargestContour(contours);
+	//	vector<Point> largestContour = contours[largestIndex];
+
+	//	/*vector<Point> hull = generateHull(largestContour, 10.0);
+	//	polylines(image, hull, false, Scalar(0, 255, 0), 5);*/
+
+	//	vector<Point> cHull(largestContour.size());
+	//	convexHull(largestContour, cHull);
+
+	//	double epsilon = 0.02 * arcLength(cHull, true);
+	//	vector<Point> simplifiedHull;
+	//	approxPolyDP(cHull, simplifiedHull, epsilon, true);
+
+	//	polylines(image, simplifiedHull, true, Scalar(0, 255, 0), 5);
+
+	//	namedWindow("Reference", WINDOW_KEEPRATIO);
+	//	resizeWindow("Reference", image.cols / 5, image.rows / 5);
+	//	imshow("Reference", image);
+
+	//	int k = waitKey(1);
+	//	if (k % 256 == 32) break;
+	//}
+
 	return 1;
 }
 
 int main(int argc, char* argv[]) {
-	testConvexHull();
+	//testConvexHull();
 }
