@@ -1,2 +1,5 @@
 ﻿  main.cpp
+C:\Users\kaleb\Desktop\Code\Final-Project\main.cpp(49,37): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\kaleb\Desktop\Code\Final-Project\main.cpp(50,39): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\kaleb\Desktop\Code\Final-Project\main.cpp(51,45): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
   Final Project.vcxproj -> C:\Users\kaleb\Desktop\Code\Final-Project\x64\Debug\Final Project.exe
